@@ -1,3 +1,11 @@
+# My addition
+.idea
+.DS_Store
+## hw1
+hw1/data
+hw1/run_logs
+hw1/submit
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
