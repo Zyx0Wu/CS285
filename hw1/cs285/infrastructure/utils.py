@@ -27,7 +27,7 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
 
         # use the most recent ob to decide what to do
         obs.append(ob)
-        ac = policy.get_action(ob).detach().numpy() # HINT: query the policy's get_action function
+        ac = policy.get_action(ob) # HINT: query the policy's get_action function
         ac = ac[0]
         acs.append(ac)
 
@@ -67,6 +67,7 @@ def sample_trajectories(env, policy, min_timesteps_per_batch, max_path_length, r
 
         # count steps
         timesteps_this_batch += get_pathlength(path)
+        print('At timestep:    ', timesteps_this_batch, '/', min_timesteps_per_batch, end='\r')
 
     return paths, timesteps_this_batch
 
@@ -79,7 +80,10 @@ def sample_n_trajectories(env, policy, ntraj, max_path_length, render=False, ren
     """
     paths = []
 
-    TODO
+    for i in range(ntraj):
+        # collect rollout
+        path = sample_trajectory(env, policy, max_path_length, render, render_mode)
+        paths.append(path)
 
     return paths
 

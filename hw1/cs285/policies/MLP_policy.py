@@ -74,21 +74,19 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 
     ##################################
 
-    def get_action(self, obs: np.ndarray) -> torch.Tensor:
+    def get_action(self, obs: np.ndarray) -> np.ndarray:
         if len(obs.shape) > 1:
             observation = obs
         else:
             observation = obs[None]
 
         # TODO return the action that the policy prescribes
-        observation = torch.from_numpy(observation).float().to(ptu.device)
-        if self.discrete:
-            dist = torch.distributions.RelaxedBernoulli(logits=self.logits_na(observation))
-            sample_ac = dist.rsample()
-        else:
-            dist = torch.distributions.Normal(loc=self.mean_net(observation), scale=torch.exp(self.logstd))
-            sample_ac = dist.rsample()
-        return sample_ac
+        observation = ptu.from_numpy(observation)
+        action_distribution = self(observation)
+        action = action_distribution.sample()  # don't bother with rsample
+        action = ptu.to_numpy(action)
+
+        return action
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
@@ -100,7 +98,11 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor) -> Any:
-        raise NotImplementedError
+        if self.discrete:
+            act_dist = torch.distributions.RelaxedOneHotCategorical(.33, logits=self.logits_na(observation))
+        else:
+            act_dist = torch.distributions.Normal(loc=self.mean_net(observation), scale=torch.exp(self.logstd))
+        return act_dist
 
 
 #####################################################
@@ -116,11 +118,17 @@ class MLPPolicySL(MLPPolicy):
             adv_n=None, acs_labels_na=None, qvals=None
     ):
         # TODO: update the policy and return the loss
-        sample_actions = self.get_action(observations)
-        loss = self.loss(sample_actions, torch.from_numpy(actions).float().to(ptu.device))
+        observations = ptu.from_numpy(observations)
+        actions = ptu.from_numpy(actions)
+
+        action_distribution = self(observations)
+        predicted_actions = action_distribution.rsample()
+
+        loss = self.loss(predicted_actions, actions)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),
