@@ -99,9 +99,12 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor) -> Any:
         if self.discrete:
-            act_dist = torch.distributions.RelaxedOneHotCategorical(.33, logits=self.logits_na(observation))
+            act_dist = torch.distributions.Categorical(logits=self.logits_na(observation))
         else:
-            act_dist = torch.distributions.Normal(loc=self.mean_net(observation), scale=torch.exp(self.logstd))
+            act_dist = distributions.MultivariateNormal(
+                loc=self.mean_net(observation),
+                covariance_matrix=torch.diag(torch.exp(self.logstd)),
+            )
         return act_dist
 
 
@@ -111,7 +114,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 class MLPPolicySL(MLPPolicy):
     def __init__(self, ac_dim, ob_dim, n_layers, size, **kwargs):
         super().__init__(ac_dim, ob_dim, n_layers, size, **kwargs)
-        self.loss = nn.MSELoss()
 
     def update(
             self, observations, actions,
@@ -122,9 +124,8 @@ class MLPPolicySL(MLPPolicy):
         actions = ptu.from_numpy(actions)
 
         action_distribution = self(observations)
-        predicted_actions = action_distribution.rsample()
 
-        loss = self.loss(predicted_actions, actions)
+        loss = -action_distribution.log_prob(actions).mean()
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
