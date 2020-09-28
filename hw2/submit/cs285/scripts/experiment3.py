@@ -197,7 +197,7 @@ class PG_Trainer(object):
             )
 
 
-def main(rtg=True, dsa=False):
+def main():
 
     import argparse
     parser = argparse.ArgumentParser()
@@ -229,9 +229,6 @@ def main(rtg=True, dsa=False):
     args = parser.parse_args()
 
     # convert to dictionary
-    args.reward_to_go = rtg
-    args.dont_standardize_advantages = dsa
-    args.exp_name = "q1_" + str(args.batch_size) + ("_rtg" if rtg else "") + ("_dsa" if dsa else "")
     params = vars(args)
 
     ## ensure compatibility with hw1 code
@@ -262,14 +259,13 @@ def main(rtg=True, dsa=False):
 
 if __name__ == "__main__":
     eval_dict = {}
-    for rtg, dsa in itertools.product(*([[True, False]]*2)):
-        eval_means = main(rtg, dsa)
-        eval_dict["q1" + ("_rtg" if rtg else "") + ("_dsa" if dsa else "")] = eval_means
+    eval_means = main()
+    eval_dict["q3_b40000_r0.005"] = eval_means
 
     plt.figure()
     for k,v in eval_dict.items():
         plt.plot(np.arange(len(v))+1, v, label=k)
-    plt.title("CartPole-v0")
+    plt.title("LunarLanderContinuous-v2")
     plt.xlabel("Iteration")
     plt.ylabel('Reward')
     plt.legend()
@@ -277,6 +273,6 @@ if __name__ == "__main__":
     # plt.xticks(fontsize=20)
     # plt.yticks(fontsize=20)
 
-    plt.savefig(save_dir / 'q1_5000.png', bbox_inches='tight', pad_inches=0.2, dpi=300)
+    plt.savefig(save_dir / 'q3.png', bbox_inches='tight', pad_inches=0.2, dpi=300)
     plt.show()
 

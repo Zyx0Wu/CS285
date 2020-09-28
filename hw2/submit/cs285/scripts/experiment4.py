@@ -197,7 +197,7 @@ class PG_Trainer(object):
             )
 
 
-def main(rtg=True, dsa=False):
+def main(batch_size=1000, learning_rate=5e-3, reward_to_go=True, nn_baseline=True):
 
     import argparse
     parser = argparse.ArgumentParser()
@@ -229,9 +229,12 @@ def main(rtg=True, dsa=False):
     args = parser.parse_args()
 
     # convert to dictionary
-    args.reward_to_go = rtg
-    args.dont_standardize_advantages = dsa
-    args.exp_name = "q1_" + str(args.batch_size) + ("_rtg" if rtg else "") + ("_dsa" if dsa else "")
+    args.batch_size = batch_size
+    args.learning_rate = learning_rate
+    args.reward_to_go = reward_to_go
+    args.nn_baseline = nn_baseline
+    args.exp_name = "q4" + "_b"+str(args.batch_size) + "_r"+str(args.learning_rate) \
+                    + ("_rtg" if args.reward_to_go else "") + ("_nnbaseline" if args.nn_baseline else "")
     params = vars(args)
 
     ## ensure compatibility with hw1 code
@@ -261,15 +264,19 @@ def main(rtg=True, dsa=False):
 
 
 if __name__ == "__main__":
+
+    # search
     eval_dict = {}
-    for rtg, dsa in itertools.product(*([[True, False]]*2)):
-        eval_means = main(rtg, dsa)
-        eval_dict["q1" + ("_rtg" if rtg else "") + ("_dsa" if dsa else "")] = eval_means
+    batch_size = [10000, 30000, 50000]
+    learning_rate = [0.005, 0.01, 0.02]
+    for b,r in itertools.product(batch_size, learning_rate):
+        eval_means = main(b, r)
+        eval_dict["q4" + "_b"+str(b) + "_r"+str(r)] = eval_means
 
     plt.figure()
     for k,v in eval_dict.items():
         plt.plot(np.arange(len(v))+1, v, label=k)
-    plt.title("CartPole-v0")
+    plt.title("HalfCheetah-v2")
     plt.xlabel("Iteration")
     plt.ylabel('Reward')
     plt.legend()
@@ -277,6 +284,27 @@ if __name__ == "__main__":
     # plt.xticks(fontsize=20)
     # plt.yticks(fontsize=20)
 
-    plt.savefig(save_dir / 'q1_5000.png', bbox_inches='tight', pad_inches=0.2, dpi=300)
+    plt.savefig(save_dir / 'q4_search.png', bbox_inches='tight', pad_inches=0.2, dpi=300)
+    plt.show()
+
+    # optimal
+    eval_dict = {}
+    b, r = (50000, 0.02)
+    for rtg, nnb in itertools.product(*([[True, False]]*2)):
+        eval_means = main(b, r, rtg, nnb)
+        eval_dict["q4" + ("_rtg" if rtg else "") + ("_nnbaseline" if nnb else "")] = eval_means
+
+    plt.figure()
+    for k, v in eval_dict.items():
+        plt.plot(np.arange(len(v)) + 1, v, label=k)
+    plt.title("HalfCheetah-v2")
+    plt.xlabel("Iteration")
+    plt.ylabel('Reward')
+    plt.legend()
+
+    # plt.xticks(fontsize=20)
+    # plt.yticks(fontsize=20)
+
+    plt.savefig(save_dir / 'q4_opt.png', bbox_inches='tight', pad_inches=0.2, dpi=300)
     plt.show()
 

@@ -169,6 +169,9 @@ class PG_Trainer(object):
             'standardize_advantages': not(params['dont_standardize_advantages']),
             'reward_to_go': params['reward_to_go'],
             'nn_baseline': params['nn_baseline'],
+            # GAE-lambda
+            'lambda': params['lambda'],
+            'use_gae': params['use_gae'],
         }
 
         train_args = {
@@ -197,7 +200,7 @@ class PG_Trainer(object):
             )
 
 
-def main(rtg=True, dsa=False):
+def main(use_gae=True):
 
     import argparse
     parser = argparse.ArgumentParser()
@@ -216,6 +219,9 @@ def main(rtg=True, dsa=False):
     parser.add_argument('--learning_rate', '-lr', type=float, default=5e-3)
     parser.add_argument('--n_layers', '-l', type=int, default=2)
     parser.add_argument('--size', '-s', type=int, default=64)
+    # GAE-lambda
+    parser.add_argument('--lambda', type=float, default=1.0)
+    parser.add_argument('--use_gae', action='store_true')
 
     parser.add_argument('--ep_len', type=int) #students shouldn't change this away from env's default
     parser.add_argument('--seed', type=int, default=1)
@@ -229,9 +235,8 @@ def main(rtg=True, dsa=False):
     args = parser.parse_args()
 
     # convert to dictionary
-    args.reward_to_go = rtg
-    args.dont_standardize_advantages = dsa
-    args.exp_name = "q1_" + str(args.batch_size) + ("_rtg" if rtg else "") + ("_dsa" if dsa else "")
+    args.use_gae = use_gae
+    args.exp_name = "bonus_" + str(args.env_name) + ("_gae" if use_gae else "")
     params = vars(args)
 
     ## ensure compatibility with hw1 code
@@ -262,14 +267,14 @@ def main(rtg=True, dsa=False):
 
 if __name__ == "__main__":
     eval_dict = {}
-    for rtg, dsa in itertools.product(*([[True, False]]*2)):
-        eval_means = main(rtg, dsa)
-        eval_dict["q1" + ("_rtg" if rtg else "") + ("_dsa" if dsa else "")] = eval_means
+    for use_gae in [True, False]:
+        eval_means = main(use_gae)
+        eval_dict["bonus" + ("_gae" if use_gae else "")] = eval_means
 
     plt.figure()
     for k,v in eval_dict.items():
         plt.plot(np.arange(len(v))+1, v, label=k)
-    plt.title("CartPole-v0")
+    plt.title("Walker2d-v2")
     plt.xlabel("Iteration")
     plt.ylabel('Reward')
     plt.legend()
@@ -277,6 +282,6 @@ if __name__ == "__main__":
     # plt.xticks(fontsize=20)
     # plt.yticks(fontsize=20)
 
-    plt.savefig(save_dir / 'q1_5000.png', bbox_inches='tight', pad_inches=0.2, dpi=300)
+    plt.savefig(save_dir / 'bonus.png', bbox_inches='tight', pad_inches=0.2, dpi=300)
     plt.show()
 
